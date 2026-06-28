@@ -2,8 +2,9 @@ import time
 import asyncio
 import aiohttp
 import requests
+import threading
 from bs4 import BeautifulSoup
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 
 # Top-level helper function for ProcessPoolExecutor (must be picklable)
 def fetch_url_sync(url):
@@ -46,9 +47,11 @@ class BaseScraper:
         self.progress_callback = progress_callback
         self.results = []
         self.metrics = {}
+        self._results_lock = threading.Lock()
 
     def report_progress(self, index, result):
-        self.results.append(result)
+        with self._results_lock:
+            self.results.append(result)
         if self.progress_callback:
             self.progress_callback(index + 1, len(self.urls), result)
 
@@ -94,12 +97,11 @@ class ThreadedScraper(BaseScraper):
     def run(self):
         start_time = time.perf_counter()
         
-        # Use ThreadPoolExecutor to submit tasks
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            # Map returns results in the order of the inputs
-            futures = [executor.submit(fetch_url_sync, url) for url in self.urls]
+            future_to_idx = {executor.submit(fetch_url_sync, url): idx for idx, url in enumerate(self.urls)}
             
-            for idx, future in enumerate(futures):
+            for future in as_completed(future_to_idx):
+                idx = future_to_idx[future]
                 res = future.result()
                 result = {
                     "url": res[0],
