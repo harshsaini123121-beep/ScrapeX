@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScrapeX - Concurrent Scraper Performance Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <h1>Scrape<span>X</span></h1>
+            </div>
+            <div class="subtitle">Multi-Threaded & Concurrent Execution Analyzer</div>
+        </header>
+
+        <!-- Top Section: Benchmark Configuration (Horizontal Bar) -->
+        <section class="card config-card">
+            <div class="card-header">
+                <i class="fa-solid fa-sliders"></i>
+                <h2>Benchmark Control Board</h2>
+            </div>
+            <div class="card-body">
+                <div class="config-bar">
+                    <div class="form-group">
+                        <label for="pages">
+                            <span>Number of Pages</span>
+                            <span class="tooltip" data-tip="Total mock requests to fetch in this test run.">
+                                <i class="fa-regular fa-circle-question"></i>
+                            </span>
+                        </label>
+                        <input type="number" id="pages" value="100" min="10" max="1000">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="delay">
+                            <span>Simulated Latency (s)</span>
+                            <span class="tooltip" data-tip="Mock network latency delay per requests.">
+                                <i class="fa-regular fa-circle-question"></i>
+                            </span>
+                        </label>
+                        <input type="number" id="delay" value="0.05" min="0" max="2" step="0.01">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="workers">
+                            <span>Concurrency Limit</span>
+                            <span class="tooltip" data-tip="Max active threads, subprocesses, or async concurrent jobs.">
+                                <i class="fa-regular fa-circle-question"></i>
+                            </span>
+                        </label>
+                        <input type="number" id="workers" value="15" min="1" max="100">
+                    </div>
+
+                    <div class="config-divider"></div>
+
+                    <div class="engines-control">
+                        <label class="section-label">Scraper Engines</label>
+                        <div class="btn-group">
+                            <button id="btn-seq" class="btn btn-secondary" onclick="startBenchmark('sequential')">
+                                <i class="fa-solid fa-play"></i> Sequential
+                            </button>
+                            <button id="btn-threaded" class="btn btn-secondary" onclick="startBenchmark('threaded')">
+                                <i class="fa-solid fa-layer-group"></i> Threaded
+                            </button>
+                            <button id="btn-process" class="btn btn-secondary" onclick="startBenchmark('process')">
+                                <i class="fa-solid fa-microchip"></i> Process
+                            </button>
+                            <button id="btn-async" class="btn btn-secondary" onclick="startBenchmark('async')">
+                                <i class="fa-solid fa-rotate"></i> Asyncio
+                            </button>
+                        </div>
+                    </div>
+
+                    <button id="btn-compare" class="btn btn-primary" onclick="startBenchmark('all')">
+                        <i class="fa-solid fa-chart-line"></i> Compare All Engines
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Middle Section: Metrics, Charts, and Logs (Structured Grid) -->
+        <div class="middle-grid">
+            
+            <!-- Left Column: Metrics & Visualizations -->
+            <div class="middle-left">
+                <!-- Metrics Bar -->
+                <section class="metrics-grid">
+                    <div class="card metric-card" id="metric-sequential">
+                        <div class="metric-icon seq"><i class="fa-solid fa-user"></i></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Sequential</span>
+                            <h3 class="metric-value">-</h3>
+                            <span class="metric-sub">Seconds</span>
+                        </div>
+                    </div>
+                    <div class="card metric-card" id="metric-threaded">
+                        <div class="metric-icon thread"><i class="fa-solid fa-arrows-split-up-and-left"></i></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Threaded</span>
+                            <h3 class="metric-value">-</h3>
+                            <span class="metric-sub">Seconds</span>
+                        </div>
+                    </div>
+                    <div class="card metric-card" id="metric-process">
+                        <div class="metric-icon process"><i class="fa-solid fa-microchip"></i></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Process</span>
+                            <h3 class="metric-value">-</h3>
+                            <span class="metric-sub">Seconds</span>
+                        </div>
+                    </div>
+                    <div class="card metric-card" id="metric-async">
+                        <div class="metric-icon async"><i class="fa-solid fa-bolt"></i></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Asyncio</span>
+                            <h3 class="metric-value">-</h3>
+                            <span class="metric-sub">Seconds</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Visualization Area (Stacked Charts) -->
+                <section class="charts-stack">
+                    <!-- Execution Time Chart -->
+                    <div class="card chart-card">
+                        <div class="card-header">
+                            <i class="fa-solid fa-chart-column"></i>
+                            <h2>Duration Comparison (Lower is Better)</h2>
+                        </div>
+                        <div class="card-body chart-container">
+                            <canvas id="timeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Throughput Chart -->
+                    <div class="card chart-card">
+                        <div class="card-header">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <h2>Throughput (Requests/sec - Higher is Better)</h2>
+                        </div>
+                        <div class="card-body chart-container">
+                            <canvas id="throughputChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column: Logs Terminal & Progress -->
+            <div class="middle-right">
+                <section class="logs-progress-section card">
+                    <div class="card-header progress-header-wrapper">
+                        <div class="header-left">
+                            <i class="fa-solid fa-square-poll-horizontal"></i>
+                            <h2 id="progress-mode-label">No Active Scraping Job</h2>
+                        </div>
+                        <div class="progress-details" id="progress-percentage">0%</div>
+                    </div>
+                    
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="progress-bar-fill"></div>
+                    </div>
+                    
+                    <!-- Log terminal -->
+                    <div class="terminal-container">
+                        <div class="terminal-header">
+                            <div class="terminal-dots">
+                                <span class="dot red"></span>
+                                <span class="dot yellow"></span>
+                                <span class="dot green"></span>
+                            </div>
+                            <span class="terminal-title">scraper_engine_logs.log</span>
+                            <button class="btn-clear" onclick="clearLogs()"><i class="fa-solid fa-trash-can"></i> Clear</button>
+                        </div>
+                        <pre class="terminal-body" id="log-terminal"><code>[i] Setup parameters, select a scraper mode and click start...</code></pre>
+                    </div>
+                </section>
+            </div>
+
+        </div>
+
+        <!-- Bottom Section: Results Table -->
+        <section class="card table-card">
+            <div class="card-header">
+                <i class="fa-solid fa-list-check"></i>
+                <h2>Scraped Pages Log Detail</h2>
+            </div>
+            <div class="table-container">
+                <table id="results-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>URL</th>
+                            <th>Engine</th>
+                            <th>Status</th>
+                            <th>Size</th>
+                            <th>Fetch Latency</th>
+                            <th>Page Title</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="empty-row">
+                            <td colspan="7">No records parsed yet. Initiate a benchmark.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>ScrapeX Concurrency Dashboard. Performance tests run in real-time with uvicorn servers.</p>
+        </footer>
+    </div>
+    
+    <!-- Custom JS -->
+    <script src="app.js"></script>
+</body>
+</html>
